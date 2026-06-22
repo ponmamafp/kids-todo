@@ -354,7 +354,7 @@ function cardCount(kidId){return Math.floor(totalStamps(kidId)/7);}
 function avatarHTML(kid){return kid.photo?`<img class="ava-img" src="${kid.photo}">`:`<span class="ava">${kid.emoji}</span>`;}
 function streakCount(kidId){const h=hist(kidId);let n=0;const d=new Date();if(!h[dkey(d)])d.setDate(d.getDate()-1);while(h[dkey(d)]){n++;d.setDate(d.getDate()-1);}return n;}
 
-function renderDate(){const d=new Date(),w=["日","月","火","水","木","金","土"][d.getDay()];$("#dateBox").textContent=`${d.getMonth()+1}/${d.getDate()}（${w}）`;}
+function renderDate(){const d=new Date(),w=["日","月","火","水","木","金","土"][d.getDay()],hh=d.getHours(),mm=("0"+d.getMinutes()).slice(-2);$("#dateBox").innerHTML=`${d.getMonth()+1}/${d.getDate()}（${w}）<span style="margin-left:12px;font-size:1.25em;color:#e08a2e;">${hh}:${mm}</span>`;}
 function renderTabs(){
   tabsEl.innerHTML="";
   state.kids.forEach(k=>{
@@ -571,6 +571,7 @@ $("#taskSave").onclick=()=>{const k=activeKid(),lb=$("#taskLabel").value.trim()|
 [$("#gateModal"),$("#kidModal"),$("#taskModal")].forEach(m=>m.addEventListener("click",e=>{if(e.target===m)m.classList.remove("show");}));
 
 let lastDay=todayStr();
+setInterval(renderDate,1000); // 左上の時計をリアルタイム更新
 setInterval(()=>{const t=todayStr();if(t!==lastDay){lastDay=t;renderAll();}else if(view==="today")renderAll();},60000);
 document.body.addEventListener("touchstart",()=>{if(actx&&actx.state==="suspended")actx.resume();},{once:true});
 
