@@ -239,6 +239,10 @@
     <h2 id="kidModalTitle">こどもをついか</h2>
     <label>なまえ</label>
     <input type="text" id="kidName" placeholder="なまえ" maxlength="8">
+    <div id="kidPresetRow">
+      <label>タイプ（やることの見本が入ります）</label>
+      <div class="slotpick" id="presetPick"></div>
+    </div>
     <label>アイコン</label>
     <div class="icon-setup">
       <div class="icon-preview" id="kidPreview"></div>
@@ -306,6 +310,25 @@ const CARDS=[
 ];
 const CARD_GRAD=["linear-gradient(150deg,#9ec5ff,#6f9fe0)","linear-gradient(150deg,#ffb3c8,#ff7ea3)","linear-gradient(150deg,#b8e6a0,#74c365)","linear-gradient(150deg,#c792ea,#8a5fd6)","linear-gradient(150deg,#ffd98a,#ffb24d)","linear-gradient(150deg,#8fd9d2,#4fb3aa)"];
 function cardStyle(i){return CARD_GRAD[i%CARD_GRAD.length];}
+
+/* 子ども追加時の「タイプ別」やること見本 */
+const PRESETS={
+  syo:{label:"小学生",ic:"🎒",tasks:[
+    {label:"はみがき",emoji:"🦷",slot:"morning"},{label:"きがえ",emoji:"👕",slot:"morning"},
+    {label:"あさごはん",emoji:"🍚",slot:"morning"},{label:"もちものチェック",emoji:"🎒",slot:"morning"},
+    {label:"しゅくだい",emoji:"📚",slot:"night"},{label:"おふろ",emoji:"🛁",slot:"night"},
+    {label:"はみがき",emoji:"🦷",slot:"night"},{label:"あしたのじゅんび",emoji:"🎒",slot:"night"}]},
+  you:{label:"ようちえん・ほいくえん",ic:"🌸",tasks:[
+    {label:"トイレ",emoji:"🚽",slot:"morning"},{label:"きがえ",emoji:"👕",slot:"morning"},
+    {label:"あさごはん",emoji:"🍚",slot:"morning"},{label:"はみがき",emoji:"🦷",slot:"morning"},
+    {label:"おかたづけ",emoji:"🧸",slot:"night"},{label:"おふろ",emoji:"🛁",slot:"night"},
+    {label:"はみがき",emoji:"🦷",slot:"night"},{label:"パジャマにきがえ",emoji:"🛏️",slot:"night"}]},
+  baby:{label:"あかちゃん",ic:"🍼",tasks:[
+    {label:"おむつかえた",emoji:"💧",slot:"morning"},{label:"ミルク・ごはん",emoji:"🍼",slot:"morning"},
+    {label:"おひるね",emoji:"😴",slot:"noon"},{label:"ミルク・ごはん",emoji:"🍼",slot:"noon"},
+    {label:"おふろ",emoji:"🛁",slot:"night"},{label:"ミルク・ごはん",emoji:"🍼",slot:"night"},
+    {label:"ねんね",emoji:"🌙",slot:"night"}]},
+};
 
 const DEFAULT={
   kids:[
@@ -536,6 +559,7 @@ $("#celebrate").onclick=()=>{$("#celebrate").classList.remove("show");clearInter
 /* 親ロック */
 let gateAns=0;
 function openGate(){const a=6+Math.floor(Math.random()*4),b=6+Math.floor(Math.random()*4);gateAns=a*b;$("#gateQ").textContent=`${a} × ${b} = ?`;$("#gateInput").value="";$("#gateModal").classList.add("show");setTimeout(()=>$("#gateInput").focus(),100);}
+$("#seg").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;view=b.dataset.v;renderAll();});
 $("#lockBtn").onclick=()=>{if(parent){parent=false;renderAll();}else openGate();};
 $("#gateCancel").onclick=()=>$("#gateModal").classList.remove("show");
 $("#gateOk").onclick=()=>{if(parseInt($("#gateInput").value,10)===gateAns){parent=true;$("#gateModal").classList.remove("show");renderAll();}else{const m=$("#gateModal").querySelector(".modal");m.classList.remove("shake");void m.offsetWidth;m.classList.add("shake");$("#gateInput").value="";}};
@@ -546,9 +570,10 @@ function buildEmoPick(container,list,onPick){container.innerHTML="";list.forEach
 function fileToThumb(file,cb){const fr=new FileReader();fr.onload=()=>{const img=new Image();img.onload=()=>{const S=160,c=document.createElement("canvas");c.width=S;c.height=S;const x=c.getContext("2d");const side=Math.min(img.width,img.height),sx=(img.width-side)/2,sy=(img.height-side)/2;x.drawImage(img,sx,sy,side,side,0,0,S,S);cb(c.toDataURL("image/jpeg",0.8));};img.src=fr.result;};fr.readAsDataURL(file);}
 
 /* 子どもモーダル */
-let editingKid=null,kidEmo=KID_EMOJIS[0],kidPhoto=null;
+let editingKid=null,kidEmo=KID_EMOJIS[0],kidPhoto=null,kidPreset="you";
 function refreshKidPreview(){$("#kidPreview").innerHTML=kidPhoto?`<img src="${kidPhoto}">`:kidEmo;$("#kidPhotoClear").style.display=kidPhoto?"block":"none";}
-function openKidModal(kid){editingKid=kid;$("#kidModalTitle").textContent=kid?"こどもをへんしゅう":"こどもをついか";$("#kidName").value=kid?kid.name:"";kidEmo=kid?kid.emoji:KID_EMOJIS[Math.floor(Math.random()*KID_EMOJIS.length)];kidPhoto=kid&&kid.photo?kid.photo:null;$("#kidEmoInput").value=kidEmo;buildEmoPick($("#kidEmoPick"),KID_EMOJIS,e=>{kidEmo=e;kidPhoto=null;$("#kidEmoInput").value=e;refreshKidPreview();});refreshKidPreview();$("#kidDelete").style.display=(kid&&state.kids.length>1)?"block":"none";$("#kidOrderRow").style.display=(kid&&state.kids.length>1)?"block":"none";$("#kidModal").classList.add("show");}
+function buildPresetPick(){const c=$("#presetPick");c.innerHTML="";Object.keys(PRESETS).forEach(key=>{const p=PRESETS[key],b=document.createElement("button");b.className=(key===kidPreset?"sel":"");b.innerHTML=`<span class="si">${p.ic}</span>${p.label}`;b.onclick=()=>{kidPreset=key;[...c.children].forEach(x=>x.classList.remove("sel"));b.classList.add("sel");};c.appendChild(b);});}
+function openKidModal(kid){editingKid=kid;$("#kidModalTitle").textContent=kid?"こどもをへんしゅう":"こどもをついか";$("#kidName").value=kid?kid.name:"";kidEmo=kid?kid.emoji:KID_EMOJIS[Math.floor(Math.random()*KID_EMOJIS.length)];kidPhoto=kid&&kid.photo?kid.photo:null;$("#kidEmoInput").value=kidEmo;buildEmoPick($("#kidEmoPick"),KID_EMOJIS,e=>{kidEmo=e;kidPhoto=null;$("#kidEmoInput").value=e;refreshKidPreview();});refreshKidPreview();kidPreset="you";buildPresetPick();$("#kidPresetRow").style.display=kid?"none":"block";$("#kidDelete").style.display=(kid&&state.kids.length>1)?"block":"none";$("#kidOrderRow").style.display=(kid&&state.kids.length>1)?"block":"none";$("#kidModal").classList.add("show");}
 function moveKid(dir){if(!editingKid)return;const i=state.kids.indexOf(editingKid),j=i+dir;if(j<0||j>=state.kids.length)return;const tmp=state.kids[i];state.kids[i]=state.kids[j];state.kids[j]=tmp;save();renderTabs();}
 $("#kidLeft").onclick=()=>moveKid(-1);
 $("#kidRight").onclick=()=>moveKid(1);
@@ -557,7 +582,7 @@ $("#kidPhotoBtn").onclick=()=>$("#kidPhotoFile").click();
 $("#kidPhotoFile").onchange=e=>{const f=e.target.files[0];if(f)fileToThumb(f,d=>{kidPhoto=d;refreshKidPreview();});e.target.value="";};
 $("#kidPhotoClear").onclick=()=>{kidPhoto=null;refreshKidPreview();};
 $("#kidCancel").onclick=()=>$("#kidModal").classList.remove("show");
-$("#kidSave").onclick=()=>{const nm=$("#kidName").value.trim()||"なまえ";const emo=[...($("#kidEmoInput").value.trim())][0]||kidEmo||"⭐";if(editingKid){editingKid.name=nm;editingKid.emoji=emo;editingKid.photo=kidPhoto||undefined;}else{const id="k"+Date.now();state.kids.push({id,name:nm,emoji:emo,photo:kidPhoto||undefined,tasks:[]});state.activeKid=id;}save();$("#kidModal").classList.remove("show");renderAll();};
+$("#kidSave").onclick=()=>{const nm=$("#kidName").value.trim()||"なまえ";const emo=[...($("#kidEmoInput").value.trim())][0]||kidEmo||"⭐";if(editingKid){editingKid.name=nm;editingKid.emoji=emo;editingKid.photo=kidPhoto||undefined;}else{const id="k"+Date.now();const tasks=(PRESETS[kidPreset]||PRESETS.you).tasks.map((t,i)=>({id:"t"+(Date.now()+i),label:t.label,emoji:t.emoji,slot:t.slot}));state.kids.push({id,name:nm,emoji:emo,photo:kidPhoto||undefined,tasks});state.activeKid=id;}save();$("#kidModal").classList.remove("show");renderAll();};
 $("#kidDelete").onclick=()=>{if(!editingKid)return;state.kids=state.kids.filter(k=>k.id!==editingKid.id);delete state.done[editingKid.id];delete state.history[editingKid.id];delete state.cards[editingKid.id];if(state.activeKid===editingKid.id)state.activeKid=state.kids[0].id;save();$("#kidModal").classList.remove("show");renderAll();};
 
 /* タスクモーダル */
