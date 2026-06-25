@@ -152,6 +152,14 @@
   .slotpick button{flex:1; border:3px solid #eee; background:#fff; border-radius:16px; padding:12px 4px; font-size:16px; font-weight:800; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; color:#888;}
   .slotpick button .si{font-size:24px;}
   .slotpick button.sel{border-color:var(--accent); background:#fff0f5; color:var(--accent);}
+  .qachips{display:flex; flex-wrap:wrap; gap:8px; margin-top:6px;}
+  .qachips button{border:3px solid #eee; background:#fff; border-radius:16px; padding:9px 13px; font-size:15px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:6px; color:#555; transition:transform .1s;}
+  .qachips button:active{transform:scale(.92);}
+  .qachips button.added{border-color:var(--green); background:#eafff5; color:var(--green);}
+  #customLabel{cursor:pointer;}
+  #customWrap.folded > *:not(#customLabel){display:none;}
+  #customLabel::after{content:" ▼"; font-size:11px; color:var(--muted);}
+  #customWrap.folded #customLabel::after{content:" ▶";}
   .icon-setup{display:flex; gap:14px; align-items:center; margin-top:6px;}
   .icon-preview{width:74px; height:74px; flex:0 0 auto; border-radius:50%; background:#f4f2f8; display:flex; align-items:center; justify-content:center; font-size:40px; overflow:hidden; border:3px solid #eee;}
   .icon-preview img{width:100%; height:100%; object-fit:cover;}
@@ -277,18 +285,24 @@
     <div class="callout">👪 <b>親子で「やること」を話し合って決めてね。</b><br>親も子も納得して決めるのが、習慣化のだいいっぽ！</div>
     <label>いつやる？</label>
     <div class="slotpick" id="slotPick"></div>
-    <label>やること</label>
-    <input type="text" id="taskLabel" placeholder="れい：はみがき" maxlength="20">
-    <label>アイコン</label>
-    <div class="icon-setup">
-      <div class="icon-preview" id="taskPreview"></div>
-      <div class="right"><input type="text" class="emo-input" id="taskEmoInput" placeholder="絵文字を入力" maxlength="4"></div>
+    <div id="qaWrap">
+      <label>よくある やること（タップでポンッとついか）</label>
+      <div class="qachips" id="qaChips"></div>
     </div>
-    <div class="emopick" id="taskEmoPick"></div>
-    <div class="hint">絵文字を直接入力／下から選択できます</div>
+    <div id="customWrap">
+      <label id="customLabel">じぶんで つくる</label>
+      <input type="text" id="taskLabel" placeholder="れい：はみがき" maxlength="20">
+      <label>アイコン</label>
+      <div class="icon-setup">
+        <div class="icon-preview" id="taskPreview"></div>
+        <div class="right"><input type="text" class="emo-input" id="taskEmoInput" placeholder="絵文字を入力" maxlength="4"></div>
+      </div>
+      <div class="emopick" id="taskEmoPick"></div>
+      <div class="hint">絵文字を直接入力／下から選択できます</div>
+    </div>
     <div class="actions">
-      <button class="btn-cancel" id="taskCancel">やめる</button>
-      <button class="btn-ok" id="taskSave">OK</button>
+      <button class="btn-cancel" id="taskCancel">とじる</button>
+      <button class="btn-ok" id="taskSave">じぶんのを ついか</button>
     </div>
   </div>
 </div>
@@ -586,13 +600,57 @@ $("#kidSave").onclick=()=>{const nm=$("#kidName").value.trim()||"なまえ";cons
 $("#kidDelete").onclick=()=>{if(!editingKid)return;state.kids=state.kids.filter(k=>k.id!==editingKid.id);delete state.done[editingKid.id];delete state.history[editingKid.id];delete state.cards[editingKid.id];if(state.activeKid===editingKid.id)state.activeKid=state.kids[0].id;save();$("#kidModal").classList.remove("show");renderAll();};
 
 /* タスクモーダル */
+const COMMON_TASKS=[
+  {label:"はみがき",emoji:"🦷"},{label:"きがえ",emoji:"👕"},{label:"あさごはん",emoji:"🍚"},
+  {label:"ゆうごはん",emoji:"🍽️"},{label:"トイレ",emoji:"🚽"},{label:"てをあらう",emoji:"💧"},
+  {label:"くつをはく",emoji:"👟"},{label:"もちもの",emoji:"🎒"},{label:"しゅくだい",emoji:"📚"},
+  {label:"おべんきょう",emoji:"✏️"},{label:"ほんをよむ",emoji:"📖"},{label:"おかたづけ",emoji:"🧸"},
+  {label:"おふろ",emoji:"🛁"},{label:"パジャマ",emoji:"🛏️"},{label:"ねるじゅんび",emoji:"🌙"},
+  {label:"おてつだい",emoji:"🧹"},{label:"おくすり",emoji:"💊"},{label:"ぎゅうにゅう",emoji:"🥛"},
+  {label:"くつした",emoji:"🧦"},{label:"あいさつ",emoji:"🙆"},
+];
 let editingTask=null,taskEmo=TASK_EMOJIS[0],taskSlot="morning";
 function refreshTaskPreview(){$("#taskPreview").textContent=taskEmo;}
 function buildSlotPick(){const c=$("#slotPick");c.innerHTML="";SLOTS.forEach(s=>{const b=document.createElement("button");b.className=(s.key===taskSlot?"sel":"");b.innerHTML=`<span class="si">${s.ic}</span>${s.label}`;b.onclick=()=>{taskSlot=s.key;[...c.children].forEach(x=>x.classList.remove("sel"));b.classList.add("sel");};c.appendChild(b);});}
-function openTaskModal(task,slot){editingTask=task;$("#taskModalTitle").textContent=task?"やることをへんしゅう":"やることをついか";$("#taskLabel").value=task?task.label:"";taskEmo=task?task.emoji:TASK_EMOJIS[Math.floor(Math.random()*TASK_EMOJIS.length)];taskSlot=task?task.slot:(slot||currentSlot());$("#taskEmoInput").value=taskEmo;buildSlotPick();buildEmoPick($("#taskEmoPick"),TASK_EMOJIS,e=>{taskEmo=e;$("#taskEmoInput").value=e;refreshTaskPreview();});refreshTaskPreview();$("#taskModal").classList.add("show");}
+function buildQaChips(){const c=$("#qaChips");c.innerHTML="";COMMON_TASKS.forEach(t=>{const b=document.createElement("button");b.innerHTML=`${t.emoji} ${t.label}`;b.onclick=()=>quickAddTask(t.label,t.emoji,b);c.appendChild(b);});}
+function quickAddTask(label,emoji,btn){
+  const k=activeKid();k.tasks.push({id:"t"+Date.now(),label,emoji,slot:taskSlot});save();renderAll();
+  const orig=btn.innerHTML;btn.classList.add("added");btn.innerHTML="✓ ついか！";
+  setTimeout(()=>{btn.classList.remove("added");btn.innerHTML=orig;},800);
+}
+function openTaskModal(task,slot){
+  editingTask=task;
+  const adding=!task;
+  $("#taskModalTitle").textContent=adding?"やることをついか":"やることをへんしゅう";
+  taskSlot=task?task.slot:(slot||currentSlot());
+  buildSlotPick();
+  // 追加モード：よくあるやること（タップ）を表示、自分でつくるは折りたたみ
+  $("#qaWrap").style.display=adding?"block":"none";
+  $("#customWrap").classList.toggle("folded",adding);
+  $("#customLabel").style.display=adding?"block":"none";
+  $("#customLabel").textContent="じぶんで つくる";
+  $("#taskCancel").textContent=adding?"とじる":"やめる";
+  $("#taskSave").textContent=adding?"じぶんのを ついか":"OK";
+  if(adding)buildQaChips();
+  $("#taskLabel").value=task?task.label:"";
+  taskEmo=task?task.emoji:TASK_EMOJIS[Math.floor(Math.random()*TASK_EMOJIS.length)];
+  $("#taskEmoInput").value=taskEmo;
+  buildEmoPick($("#taskEmoPick"),TASK_EMOJIS,e=>{taskEmo=e;$("#taskEmoInput").value=e;refreshTaskPreview();});
+  refreshTaskPreview();
+  $("#taskModal").classList.add("show");
+}
+$("#customLabel").onclick=()=>{ if($("#qaWrap").style.display!=="none") $("#customWrap").classList.toggle("folded"); };
 $("#taskEmoInput").oninput=e=>{const v=[...e.target.value.trim()][0]||"";if(v){taskEmo=v;refreshTaskPreview();}};
 $("#taskCancel").onclick=()=>$("#taskModal").classList.remove("show");
-$("#taskSave").onclick=()=>{const k=activeKid(),lb=$("#taskLabel").value.trim()||"やること";const emo=[...($("#taskEmoInput").value.trim())][0]||taskEmo||"⭐";if(editingTask){editingTask.label=lb;editingTask.emoji=emo;editingTask.slot=taskSlot;}else k.tasks.push({id:"t"+Date.now(),label:lb,emoji:emo,slot:taskSlot});save();$("#taskModal").classList.remove("show");renderAll();};
+$("#taskSave").onclick=()=>{
+  const k=activeKid(),adding=!editingTask;
+  const typed=$("#taskLabel").value.trim();
+  if(adding&&!typed){$("#taskModal").classList.remove("show");return;} // 自分のを入れてなければ閉じるだけ
+  const lb=typed||"やること",emo=[...($("#taskEmoInput").value.trim())][0]||taskEmo||"⭐";
+  if(editingTask){editingTask.label=lb;editingTask.emoji=emo;editingTask.slot=taskSlot;}
+  else k.tasks.push({id:"t"+Date.now(),label:lb,emoji:emo,slot:taskSlot});
+  save();$("#taskModal").classList.remove("show");renderAll();
+};
 [$("#gateModal"),$("#kidModal"),$("#taskModal")].forEach(m=>m.addEventListener("click",e=>{if(e.target===m)m.classList.remove("show");}));
 
 let lastDay=todayStr();
